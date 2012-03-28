@@ -1,11 +1,22 @@
 #include <stdio.h>
 #include <list>
 #include <cmath>
+#include <sstream>
+#include <fstream>
+#include <iostream>
 #include "pin.H"
+
 
 int log2(int n) {
     return (log10(n))/(log10(2));
 }
+
+string uint_to_string(UINT64 n) {
+    std::stringstream stream;
+    stream << n;
+    return stream.str();
+}
+
 
 class Line {
     private:
@@ -64,15 +75,17 @@ class Memory {
     public:
         virtual VOID read(VOID *addr) = 0;
         virtual VOID write(VOID *addr) = 0;
+        virtual VOID output(std::ostream *outstream) = 0;
 };
 
-class RAM : Memory {       
+class RAM : public Memory {       
     public:
-        virtual VOID read(VOID *addr) {};
-        virtual VOID write(VOID *addr) {};
+        virtual VOID read(VOID *addr) {}
+        virtual VOID write(VOID *addr) {}
+        virtual VOID output(std::ostream *outstream) {}
 };
 
-class Cache : Memory {
+class Cache : public Memory {
     private:
         Memory* next;
         vector<Set> sets;
@@ -147,18 +160,22 @@ class Cache : Memory {
                 sets[index].load_tag(tag);
             }
         }
+
+        virtual VOID output(std::ostream *outstream) {
+            *outstream << "reads: " + uint_to_string(reads) << std::endl;
+        }
 };
 
 
+std::ofstream outfile;
+Memory *front_memory;
 
-FILE * trace;
-
-VOID rec_memread(VOID * ip, VOID * addr) {
-    fprintf(trace,"%p: R %p\n", ip, addr);
+VOID rec_memread(VOID *ip, VOID *addr) {
+    front_memory->read(addr);
 }
 
 VOID rec_memwrite(VOID * ip, VOID * addr) {
-    fprintf(trace,"%p: W %p\n", ip, addr);
+    front_memory->write(addr);
 }
 
 VOID instrument_instruction(INS ins, VOID *v) {
@@ -166,23 +183,21 @@ VOID instrument_instruction(INS ins, VOID *v) {
 
     for (UINT32 memop = 0; memop < memops; memop++) {
         if (INS_MemoryOperandIsRead(ins, memop)) {
-            INS_InsertPredicatedCall(
-                ins, IPOINT_BEFORE, (AFUNPTR)rec_memread, IARG_INST_PTR,
-                IARG_MEMORYOP_EA, memop, IARG_END);
+            INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)rec_memread,
+                IARG_INST_PTR, IARG_MEMORYOP_EA, memop, IARG_END);
         }
 
         if (INS_MemoryOperandIsWritten(ins, memop)) {
-            INS_InsertPredicatedCall(
-                ins, IPOINT_BEFORE, (AFUNPTR)rec_memwrite, IARG_INST_PTR,
-                IARG_MEMORYOP_EA, memop, IARG_END);
+            INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
+                (AFUNPTR)rec_memwrite, IARG_INST_PTR, IARG_MEMORYOP_EA, memop,
+                IARG_END);
         }
     }
 }
 
-VOID finalize(INT32 code, VOID *v)
-{
-    fprintf(trace, "#eof\n");
-    fclose(trace);
+VOID finalize(INT32 code, VOID *v) {
+    front_memory->output(&outfile);
+    outfile.close();
 }
 
 INT32 usage() {
@@ -191,16 +206,25 @@ INT32 usage() {
     return -1;
 }
 
+
+
 int main(int argc, char *argv[])
 {
 
     if (PIN_Init(argc, argv))
         return usage();
 
-    trace = fopen("arqsimucache.out", "w");
+
+    outfile.open("arqsimucache.out");
 
     INS_AddInstrumentFunction(instrument_instruction, 0);
     PIN_AddFiniFunction(finalize, 0);
+
+    RAM ram;
+    Cache l2(&ram, 256*1024, 2, 16);
+    Cache l1(&l2, 8*1024, 2, 16);
+
+    front_memory = &l1;
 
     // start program and never return
     PIN_StartProgram();

@@ -9,7 +9,7 @@ And run with::
     ../../../pin -injection child -t obj-intel64/arqsimucache.so -- /bin/ls
 
 To debug, follow instructions in
-`http://www.pintool.org/docs/45467/Pin/html/`_. You will probably use
+http://www.pintool.org/docs/45467/Pin/html/. You will probably use
 something like the following, to pause while you attach to the process using
 gdb::
 

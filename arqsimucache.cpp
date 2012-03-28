@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <list>
 #include <cmath>
 #include "pin.H"
 
@@ -30,26 +31,23 @@ class Set {
     private:
         int ways;
         list<Line> lines;
-        
-    public:
-        Set(int nways = 1) : ways(nways), list(lines) {}
-        
-        bool is_present(UINT64 tag) {
-            for (int i = 0; (UINT64)i < ways.size(); i++)
-                if (ways[i].is_present() && ways[i].get_tag() == tag)
-                    return true;
 
+    public:
+        Set(int nways = 1) : ways(nways), lines(list) {}
+
+        bool is_present(UINT64 tag) {
+            list<Line>::iterator it;
+            for (it = lines.begin(); it != lines.end(); it++)
+                if (it->is_present() && it->get_tag() == tag)
+                    return true;
             return false;
         }
-        
-        bool is_full() {
-            for (int i = 0; (UINT64)i < ways.size(); i++)
-                if (!ways[i].is_present())
-                    return false;
 
-            return true;
+        bool is_full() {
+            return (lines.size() == ways);
+
         }
-        
+
         VOID unload_tag() {
             
         }

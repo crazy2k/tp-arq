@@ -161,12 +161,16 @@ class Cache : public Memory {
         }
 
         virtual VOID output(std::ostream *outstream) {
+            *outstream << "=" << std::endl;
             *outstream << "reads: " + uint_to_string(reads) << std::endl;
+            *outstream << "writes: " + uint_to_string(writes) << std::endl;
+            *outstream << "read hits: " + uint_to_string(read_hits) << std::endl;
+            *outstream << "write hits: " + uint_to_string(write_hits) << std::endl;
+            next->output(outstream);
         }
 };
 
 
-std::ofstream outfile;
 Memory *front_memory;
 
 VOID rec_memread(VOID *ip, VOID *addr) {
@@ -204,7 +208,6 @@ INT32 usage() {
         KNOB_BASE::StringKnobSummary() + "\n");
     return -1;
 }
-
 
 
 int main(int argc, char *argv[])

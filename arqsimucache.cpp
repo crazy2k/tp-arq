@@ -222,11 +222,17 @@ int main(int argc, char *argv[])
     INS_AddInstrumentFunction(instrument_instruction, 0);
     PIN_AddFiniFunction(finalize, 0);
 
-    RAM ram;
-    Cache l2(&ram, 256*1024, 2, 16);
-    Cache l1(&l2, 8*1024, 2, 16);
+    RAM *ram = new RAM();
+    Cache *l2 = new Cache(ram, 64*1024, 2, 16);
+    Cache *l1 = new Cache(l2, 1000*1024, 2, 16);
 
-    front_memory = &l1;
+/*
+    RAM ram;
+    Cache l2(&ram, 8*1024, 2, 16);
+    Cache l1(&l2, 8*1024, 2, 16);
+*/  
+
+    front_memory = l1;
 
     // start program and never return
     PIN_StartProgram();

@@ -29,36 +29,45 @@ class Line {
 
 class Set {
     private:
-        int ways;
+        UINT64 ways;
         list<Line> lines;
 
     public:
-        Set(int nways = 1) : ways(nways), lines(list) {}
+        Set(UINT64 nways = 1) : ways(nways) {}
 
         bool is_present(UINT64 tag) {
             list<Line>::iterator it;
             for (it = lines.begin(); it != lines.end(); it++)
                 if (it->is_present() && it->get_tag() == tag)
                     return true;
+
             return false;
         }
 
         bool is_full() {
             return (lines.size() == ways);
-
         }
 
-        VOID unload_tag() {
-            
+        UINT64 unload_tag() {
+            UINT64 unloaded_tag = lines.front().get_tag();
+            lines.pop_front();
+            return unloaded_tag;
+        }
+
+        VOID load_tag(UINT64 tag) {
+            // TODO: handle the case when set is full
+            lines.push_back(tag);
         }
 };
 
 class Memory {        
+    public:
         virtual VOID read(VOID *addr) = 0;
         virtual VOID write(VOID *addr) = 0;
 };
 
 class RAM : Memory {       
+    public:
         virtual VOID read(VOID *addr) {};
         virtual VOID write(VOID *addr) {};
 };
@@ -117,7 +126,7 @@ class Cache : Memory {
                 hits++;
             } else {
                 if (sets[index].is_full())
-                    next->write(make_addr(sets[index].unload_tag(), index));
+                    next->write((VOID *)make_addr(sets[index].unload_tag(), index));
                 
                 next->read(addr);                
                 sets[index].load_tag(tag);
@@ -132,7 +141,7 @@ class Cache : Memory {
                 hits++;
             } else {
                 if (sets[index].is_full())
-                    next->write(make_addr(sets[index].unload_tag(), index));
+                    next->write((VOID *)make_addr(sets[index].unload_tag(), index));
                 
                 next->read(addr);
                 sets[index].load_tag(tag);

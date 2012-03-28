@@ -84,7 +84,7 @@ class RAM : public Memory {
 
 class Cache : public Memory {
     private:
-        Memory* next;
+        Memory *next;
         vector<Set> sets;
         int  ways, line_len, size;
         int reads, writes, hits;
@@ -94,7 +94,7 @@ class Cache : public Memory {
         }
         
         UINT64 index_mask() {
-            return 0xFFFFFFFF >> (64 - index_len());
+            return 0xFFFFFFFFFFFFFFFF >> (64 - index_len());
         }
         
         UINT64 offset_len() {
@@ -106,12 +106,12 @@ class Cache : public Memory {
         }
   
   
-        UINT64 get_tag(VOID *addr) {
+        UINT64 get_index(VOID *addr) {
             return ((UINT64)addr >> offset_len()) & index_mask();
         }
 
   
-        UINT64 get_index(VOID *addr) {
+        UINT64 get_tag(VOID *addr) {
             return (UINT64)addr >> (offset_len() + index_len());
         }
 

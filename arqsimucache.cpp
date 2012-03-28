@@ -7,6 +7,8 @@
 #include "pin.H"
 
 
+std::ofstream outfile;
+
 int log2(int n) {
     return (log10(n))/(log10(2));
 }
@@ -21,16 +23,10 @@ string uint_to_string(UINT64 n) {
 class Line {
     private:
         UINT64 tag;
-        bool flag_present;
     
     public:
         Line(UINT64 ptag = 0) {
             tag = ptag;
-            flag_present = false;
-        }
-        
-        bool is_present() {
-            return flag_present;
         }
         
         UINT64 get_tag() {
@@ -48,9 +44,10 @@ class Set {
 
         bool is_present(UINT64 tag) {
             list<Line>::iterator it;
-            for (it = lines.begin(); it != lines.end(); it++)
-                if (it->is_present() && it->get_tag() == tag)
+            for (it = lines.begin(); it != lines.end(); it++) {
+                if (it->get_tag() == tag)
                     return true;
+            }
 
             return false;
         }

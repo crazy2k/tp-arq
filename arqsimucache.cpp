@@ -87,7 +87,7 @@ class Cache : public Memory {
         Memory *next;
         vector<Set> sets;
         int  ways, line_len, size;
-        int reads, writes, hits;
+        int reads, writes, read_hits, write_hits;
         
         UINT64 index_len() {
             return log2(size/(ways*line_len));
@@ -133,10 +133,11 @@ class Cache : public Memory {
             UINT64 tag = get_tag(addr), index = get_index(addr);
                        
             if (sets[index].is_present(tag)) {
-                hits++;
+                read_hits++;
             } else {
-                if (sets[index].is_full())
+                if (sets[index].is_full()) {
                     next->write((VOID *)make_addr(sets[index].unload_tag(), index));
+                }
                 
                 next->read(addr);                
                 sets[index].load_tag(tag);
@@ -148,10 +149,11 @@ class Cache : public Memory {
             UINT64 tag = get_tag(addr), index = get_index(addr);        
             
             if (sets[index].is_present(tag)) {
-                hits++;
+                write_hits++;
             } else {
-                if (sets[index].is_full())
+                if (sets[index].is_full()) {
                     next->write((VOID *)make_addr(sets[index].unload_tag(), index));
+                }
                 
                 next->read(addr);
                 sets[index].load_tag(tag);

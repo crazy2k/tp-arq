@@ -19,6 +19,12 @@ string uint_to_string(UINT64 n) {
     return stream.str();
 }
 
+string double_to_string(double n) {
+    std::stringstream stream;
+    stream << n;
+    return stream.str();
+}
+
 
 class Line {
     private:
@@ -84,6 +90,7 @@ class RAM : public Memory {
 
 class Cache : public Memory {
     private:
+        string description;
         Memory *next;
         vector<Set> sets;
         int  ways, line_len, size;
@@ -117,9 +124,10 @@ class Cache : public Memory {
 
 
     public:
-        Cache(Memory *pnext = NULL, int psize = 4*1024, int pways = 1,
-            int pline_len = 8) : next(pnext), ways(pways), line_len(pline_len),
-            size(psize) {
+        Cache(string pdescription = "", Memory *pnext = NULL,
+            int psize = 4*1024, int pways = 1, int pline_len = 8) :
+            description(pdescription), next(pnext), ways(pways),
+            line_len(pline_len), size(psize) {
              
             int sets_number = size/(ways*line_len);
              
@@ -161,11 +169,18 @@ class Cache : public Memory {
         }
 
         virtual VOID output(std::ostream *outstream) {
-            *outstream << "=" << std::endl;
-            *outstream << "reads: " + uint_to_string(reads) << std::endl;
-            *outstream << "writes: " + uint_to_string(writes) << std::endl;
-            *outstream << "read hits: " + uint_to_string(read_hits) << std::endl;
-            *outstream << "write hits: " + uint_to_string(write_hits) << std::endl;
+            *outstream << "=====" << std::endl;
+            *outstream << description << ":" << std::endl;
+
+            *outstream << "\tread hits/reads: " <<
+                uint_to_string(read_hits) << "/" << uint_to_string(reads) <<
+                " = " << double_to_string(read_hits/(double)reads) <<
+                std::endl;
+
+            *outstream << "\twrite hits/writes: " <<
+                uint_to_string(write_hits) << "/" << uint_to_string(writes) <<
+                " = " << double_to_string(write_hits/(double)writes) <<
+                std::endl;
             next->output(outstream);
         }
 };

@@ -238,14 +238,8 @@ int main(int argc, char *argv[])
     PIN_AddFiniFunction(finalize, 0);
 
     RAM *ram = new RAM();
-    Cache *l2 = new Cache(ram, 64*1024, 2, 16);
-    Cache *l1 = new Cache(l2, 1000*1024, 2, 16);
-
-/*
-    RAM ram;
-    Cache l2(&ram, 8*1024, 2, 16);
-    Cache l1(&l2, 8*1024, 2, 16);
-*/  
+    Cache *l2 = new Cache("L2", ram, 1000*1024, 2, 16);
+    Cache *l1 = new Cache("L1", l2, 64*1024, 2, 16);
 
     front_memory = l1;
 

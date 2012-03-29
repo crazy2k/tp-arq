@@ -173,14 +173,14 @@ class Cache : public Memory {
             *outstream << description << ":" << std::endl;
 
             *outstream << "\tread hits/reads: " <<
-                uint_to_string(read_hits) << "/" << uint_to_string(reads) <<
+                uint_to_string(read_hits) << " / " << uint_to_string(reads) <<
                 " = " << double_to_string(read_hits/(double)reads) <<
                 std::endl;
 
             *outstream << "\twrite hits/writes: " <<
-                uint_to_string(write_hits) << "/" << uint_to_string(writes) <<
-                " = " << double_to_string(write_hits/(double)writes) <<
-                std::endl;
+                uint_to_string(write_hits) << " / " <<
+                uint_to_string(writes) << " = " <<
+                double_to_string(write_hits/(double)writes) << std::endl;
             next->output(outstream);
         }
 };

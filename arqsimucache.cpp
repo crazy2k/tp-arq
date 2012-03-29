@@ -108,8 +108,8 @@ class Cache : public Memory {
             return log2(line_len);
         }
         
-        UINT64 make_addr(UINT64 tag, UINT64 index) {
-            return ((tag << index_len()) | index) << offset_len();
+        VOID* make_addr(UINT64 tag, UINT64 index) {
+            return (VOID *)(((tag << index_len()) | index) << offset_len());
         }
   
   
@@ -144,7 +144,7 @@ class Cache : public Memory {
                 read_hits++;
             } else {
                 if (sets[index].is_full()) {
-                    next->write((VOID *)make_addr(sets[index].unload_tag(), index));
+                    next->write(make_addr(sets[index].unload_tag(), index));
                 }
                 
                 next->read(addr);                
@@ -160,7 +160,7 @@ class Cache : public Memory {
                 write_hits++;
             } else {
                 if (sets[index].is_full()) {
-                    next->write((VOID *)make_addr(sets[index].unload_tag(), index));
+                    next->write(make_addr(sets[index].unload_tag(), index));
                 }
                 
                 next->read(addr);

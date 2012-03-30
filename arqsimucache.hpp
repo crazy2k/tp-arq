@@ -1,8 +1,8 @@
 #include "arqsimucommons.h"
 
-#define ARQSIMUCACHE_RAMOH 10
+#define ARQSIMUCACHE_RAMOH 8
 #define ARQSIMUCACHE_L1OH 1
-#define ARQSIMUCACHE_L2OH 3
+#define ARQSIMUCACHE_L2OH 2
 
 class Line {
     private:

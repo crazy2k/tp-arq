@@ -48,3 +48,19 @@ int main(int argc, char *argv[])
         return usage();
 
 
+    outfile.open("arqsimucache.out");
+
+    INS_AddInstrumentFunction(instrument_instruction, 0);
+    PIN_AddFiniFunction(finalize, 0);
+
+    RAM *ram = new RAM();
+    Cache *l2 = new Cache("L2", ram, 1000*1024, 2, 16);
+    Cache *l1 = new Cache("L1", l2, 64*1024, 2, 16);
+
+    front_memory = l1;
+
+    // start program and never return
+    PIN_StartProgram();
+    
+    return 0;
+}

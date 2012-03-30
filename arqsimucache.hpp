@@ -1,3 +1,8 @@
+#include <stdio.h>
+#include <list>
+#include <cmath>
+#include <sstream>
+#include <fstream>
 #include "pin.H"
 
 

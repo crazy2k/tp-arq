@@ -19,7 +19,7 @@ string double_to_string(double n) {
 
 
 //Line methods
-Line::Line(UINT64 ptag = 0) {
+Line::Line(UINT64 ptag) {
     tag = ptag;
 }
 
@@ -29,7 +29,7 @@ UINT64 Line::get_tag() {
 
 
 //Set methods
-Set::Set(UINT64 nways = 1) : ways(nways) {}
+Set::Set(UINT64 nways) : ways(nways) {}
 
 bool Set::is_present(UINT64 tag) {
     list<Line>::iterator it;
@@ -90,8 +90,8 @@ UINT64 Cache::get_tag(VOID *addr) {
     return (UINT64)addr >> (offset_len() + index_len());
 }
 
-Cache::Cache(string pdescription = "", Memory *pnext = NULL,
-    int psize = 4*1024, int pways = 1, int pline_len = 8) :
+Cache::Cache(string pdescription, Memory *pnext,
+    int psize, int pways, int pline_len) :
     description(pdescription), next(pnext), ways(pways),
     line_len(pline_len), size(psize) {
      

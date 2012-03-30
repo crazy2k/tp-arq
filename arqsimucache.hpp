@@ -1,5 +1,8 @@
 #include "arqsimucommons.h"
 
+#define ARQSIMUCACHE_RAMOH 10
+#define ARQSIMUCACHE_L1OH 1
+#define ARQSIMUCACHE_L2OH 3
 
 class Line {
     private:
@@ -25,17 +28,23 @@ class Set {
         VOID load_tag(UINT64 tag);
 };
 
-class Memory {        
+class Memory {
+    private:
+        UINT64 overhead;
+
     public:
-        virtual VOID read(VOID *addr) = 0;
-        virtual VOID write(VOID *addr) = 0;
+        Memory(UINT64 poverhead = 0);
+        // read() and write() return the overhead in cycles of the operation
+        virtual UINT64 read(VOID *addr);
+        virtual UINT64 write(VOID *addr);
         virtual VOID output(std::ostream *outstream) = 0;
+        virtual VOID set_overhead(UINT64 new_overhead);
+        virtual UINT64 get_overhead();
 };
 
 class RAM : public Memory {       
     public:
-        virtual VOID read(VOID *addr);
-        virtual VOID write(VOID *addr);
+        RAM();
         virtual VOID output(std::ostream *outstream);
 };
 
@@ -58,8 +67,8 @@ class Cache : public Memory {
         Cache(string pdescription = "", Memory *pnext = NULL,
             int psize = 4*1024, int pways = 1, int pline_len = 8);
 
-        virtual VOID read(VOID *addr);
-        virtual VOID write(VOID *addr);
+        virtual UINT64 read(VOID *addr);
+        virtual UINT64 write(VOID *addr);
         virtual VOID output(std::ostream *outstream);
 };
 
@@ -102,10 +111,28 @@ VOID Set::load_tag(UINT64 tag) {
     lines.push_back(tag);
 }
 
+//Memory methods
+Memory::Memory(UINT64 poverhead) : overhead(poverhead) {}
 
-//Ram methods
-VOID RAM::read(VOID *addr) {}
-VOID RAM::write(VOID *addr) {}
+UINT64 Memory::read(VOID *addr) {
+    return overhead;
+}
+
+UINT64 Memory::write(VOID *addr) {
+    return overhead;
+}
+
+VOID Memory::set_overhead(UINT64 new_overhead) {
+    overhead = new_overhead;
+}
+
+UINT64 Memory::get_overhead() {
+    return overhead;
+}
+
+
+//RAM methods
+RAM::RAM() : Memory(ARQSIMUCACHE_RAMOH) {}
 VOID RAM::output(std::ostream *outstream) {}
 
 
@@ -140,7 +167,14 @@ Cache::Cache(string pdescription, Memory *pnext,
     int psize, int pways, int pline_len) :
     description(pdescription), next(pnext), ways(pways),
     line_len(pline_len), size(psize) {
-     
+
+    UINT64 my_overhead = 0;
+    if (description == "L1")
+        my_overhead = ARQSIMUCACHE_L1OH;
+    else if (description == "L2")
+        my_overhead = ARQSIMUCACHE_L2OH;
+    set_overhead(my_overhead);
+
     int sets_number = size/(ways*line_len);
      
     for (int i = 0; i < sets_number; i++)
@@ -148,36 +182,44 @@ Cache::Cache(string pdescription, Memory *pnext,
 
 }
 
-VOID Cache::read(VOID *addr) {
+UINT64 Cache::read(VOID *addr) {
     reads++;
     UINT64 tag = get_tag(addr), index = get_index(addr);
-               
+
+    UINT64 total_overhead = get_overhead();
     if (sets[index].is_present(tag)) {
         read_hits++;
     } else {
         if (sets[index].is_full()) {
-            next->write(make_addr(sets[index].unload_tag(), index));
+            total_overhead +=
+                next->write(make_addr(sets[index].unload_tag(), index));
         }
         
-        next->read(addr);                
+        total_overhead += next->read(addr);
         sets[index].load_tag(tag);
     }
+
+    return total_overhead;
 }
 
-VOID Cache::write(VOID *addr) {
+UINT64 Cache::write(VOID *addr) {
     writes++;
     UINT64 tag = get_tag(addr), index = get_index(addr);        
     
+    UINT64 total_overhead = get_overhead();
     if (sets[index].is_present(tag)) {
         write_hits++;
     } else {
         if (sets[index].is_full()) {
-            next->write(make_addr(sets[index].unload_tag(), index));
+            total_overhead +=
+                next->write(make_addr(sets[index].unload_tag(), index));
         }
         
-        next->read(addr);
+        total_overhead += next->read(addr);
         sets[index].load_tag(tag);
     }
+
+    return total_overhead;
 }
 
 VOID Cache::output(std::ostream *outstream) {

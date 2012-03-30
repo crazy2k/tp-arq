@@ -11,7 +11,7 @@ class Predictor {
 
     public:
         Predictor(string pdescription = "");
-        virtual VOID analyze(VOID *ip, VOID *target, bool taken) = 0;
+        virtual bool analyze(VOID *ip, VOID *target, bool taken) = 0;
         virtual VOID output(std::ostream *outstream);
 };
 
@@ -19,7 +19,7 @@ class Predictor {
 class NeverJumpPredictor : public Predictor {
     public:
         NeverJumpPredictor();
-        virtual VOID analyze(VOID *ip, VOID *target, bool taken);
+        virtual bool analyze(VOID *ip, VOID *target, bool taken);
 };
 
 
@@ -27,7 +27,7 @@ class AlwaysJumpPredictor : public Predictor {
     public:
         AlwaysJumpPredictor();
 
-        virtual VOID analyze(VOID *ip, VOID *target, bool taken);
+        virtual bool analyze(VOID *ip, VOID *target, bool taken);
 };
 
 
@@ -35,7 +35,7 @@ class JumpIfTargetIsLowerPredictor : public Predictor {
     public:
         JumpIfTargetIsLowerPredictor();
 
-        virtual VOID analyze(VOID *ip, VOID *target, bool taken);
+        virtual bool analyze(VOID *ip, VOID *target, bool taken);
 };
 
 
@@ -51,7 +51,7 @@ class HistoryPredictor : public Predictor {
     public:
         HistoryPredictor(UINT64 pbits = 1);
 
-        virtual VOID analyze(VOID *ip, VOID *target, bool taken);
+        virtual bool analyze(VOID *ip, VOID *target, bool taken);
 };
 
 
@@ -72,11 +72,14 @@ VOID Predictor::output(std::ostream *outstream) {
 NeverJumpPredictor::NeverJumpPredictor() : Predictor("Never Jump Predictor") {
 }
 
-VOID NeverJumpPredictor::analyze(VOID *ip, VOID *target, bool taken) {
+bool NeverJumpPredictor::analyze(VOID *ip, VOID *target, bool taken) {
     predictions++;
 
-    if (!taken)
+    if (!taken) {
         hits++;
+        return true;
+    }
+    return false;
 }
 
 
@@ -84,11 +87,14 @@ VOID NeverJumpPredictor::analyze(VOID *ip, VOID *target, bool taken) {
 AlwaysJumpPredictor::AlwaysJumpPredictor() :
     Predictor("Always Jump Predictor") {}
 
-VOID AlwaysJumpPredictor::analyze(VOID *ip, VOID *target, bool taken) {
+bool AlwaysJumpPredictor::analyze(VOID *ip, VOID *target, bool taken) {
     predictions++;
 
-    if (taken)
+    if (taken) {
         hits++;
+        return true;
+    }
+    return false;
 }
 
 
@@ -96,17 +102,22 @@ VOID AlwaysJumpPredictor::analyze(VOID *ip, VOID *target, bool taken) {
 JumpIfTargetIsLowerPredictor::JumpIfTargetIsLowerPredictor() :
     Predictor("Jump If Target Is Lower Predictor") {}
 
-VOID JumpIfTargetIsLowerPredictor::analyze(VOID *ip, VOID *target, bool taken) {
+bool JumpIfTargetIsLowerPredictor::analyze(VOID *ip, VOID *target, bool taken) {
     predictions++;
 
     if (target < ip) {
-        if (taken)
+        if (taken) {
             hits++;
+            return true;
+        }
     }
     else {
-        if (!taken)
+        if (!taken) {
             hits++;
+            return true;
+        }
     }
+    return false;
 }
 
 
@@ -115,7 +126,7 @@ HistoryPredictor::HistoryPredictor(UINT64 pbits) :
     Predictor("History Predictor - " + uint_to_string(pbits) +
         "bits"), bits(pbits) {}
 
-VOID HistoryPredictor::analyze(VOID *ip, VOID *target, bool taken) {
+bool HistoryPredictor::analyze(VOID *ip, VOID *target, bool taken) {
     predictions++;
 
     UINT64 uint_ip = (UINT64)ip;
@@ -138,6 +149,8 @@ VOID HistoryPredictor::analyze(VOID *ip, VOID *target, bool taken) {
         // mind for the future
         if (ih->wrong == bits)
             ih->current_prediction = !(ih->current_prediction);
+
+        return false;
     }
     // if we predicted correctly,
     else {
@@ -145,6 +158,8 @@ VOID HistoryPredictor::analyze(VOID *ip, VOID *target, bool taken) {
         // we forget about the times we were wrong in a row
         // immediately before
         ih->wrong = bits;
+
+        return true;
     }
 }
 

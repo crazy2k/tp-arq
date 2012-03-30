@@ -1,14 +1,4 @@
-#include <stdio.h>
-#include <list>
-#include <cmath>
-#include <sstream>
-#include <fstream>
-#include "pin.H"
-
-
-int log2(int n);
-string uint_to_string(UINT64 n);
-string double_to_string(double n);
+#include "arqsimucommon.h"
 
 
 class Line {
@@ -72,23 +62,6 @@ class Cache : public Memory {
         virtual VOID write(VOID *addr);
         virtual VOID output(std::ostream *outstream);
 };
-
-
-int log2(int n) {
-    return (log10(n))/(log10(2));
-}
-
-string uint_to_string(UINT64 n) {
-    std::stringstream stream;
-    stream << n;
-    return stream.str();
-}
-
-string double_to_string(double n) {
-    std::stringstream stream;
-    stream << n;
-    return stream.str();
-}
 
 
 //Line methods

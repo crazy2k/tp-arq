@@ -118,7 +118,7 @@ VOID Cache::read(VOID *addr) {
     }
 }
 
-Cache::VOID write(VOID *addr) {
+VOID Cache::write(VOID *addr) {
     writes++;
     UINT64 tag = get_tag(addr), index = get_index(addr);        
     
@@ -134,7 +134,7 @@ Cache::VOID write(VOID *addr) {
     }
 }
 
-Cache::VOID output(std::ostream *outstream) {
+VOID Cache::output(std::ostream *outstream) {
     *outstream << "=====" << std::endl;
     *outstream << description << ":" << std::endl;
 

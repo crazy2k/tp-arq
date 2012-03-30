@@ -1,151 +1,66 @@
 #include "arqsimucache.hpp"
 
 
-int log2(int n) {
-    return (log10(n))/(log10(2));
+static std::ofstream outfile;
+static Memory *front_memory;
+
+static VOID rec_memread(VOID *ip, VOID *addr) {
+    front_memory->read(addr);
 }
 
-string uint_to_string(UINT64 n) {
-    std::stringstream stream;
-    stream << n;
-    return stream.str();
+static VOID rec_memwrite(VOID * ip, VOID * addr) {
+    front_memory->write(addr);
 }
 
-string double_to_string(double n) {
-    std::stringstream stream;
-    stream << n;
-    return stream.str();
-}
+static VOID instrument_instruction(INS ins, VOID *v) {
+    UINT32 memops = INS_MemoryOperandCount(ins);
 
-
-//Line methods
-Line::Line(UINT64 ptag) {
-    tag = ptag;
-}
-
-UINT64 Line::get_tag() {
-    return tag;
-}
-
-
-//Set methods
-Set::Set(UINT64 nways) : ways(nways) {}
-
-bool Set::is_present(UINT64 tag) {
-    list<Line>::iterator it;
-    for (it = lines.begin(); it != lines.end(); it++) {
-        if (it->get_tag() == tag)
-            return true;
-    }
-
-    return false;
-}
-
-bool Set::is_full() {
-    return (lines.size() == ways);
-}
-
-UINT64 Set::unload_tag() {
-    UINT64 unloaded_tag = lines.front().get_tag();
-    lines.pop_front();
-    return unloaded_tag;
-}
-
-VOID Set::load_tag(UINT64 tag) {
-    // TODO: handle the case when set is full
-    lines.push_back(tag);
-}
-
-
-//Ram methods
-VOID RAM::read(VOID *addr) {}
-VOID RAM::write(VOID *addr) {}
-VOID RAM::output(std::ostream *outstream) {}
-
-
-//Cache methods
-UINT64 Cache::index_len() {
-    return log2(size/(ways*line_len));
-}
-
-UINT64 Cache::index_mask() {
-    return 0xFFFFFFFFFFFFFFFF >> (64 - index_len());
-}
-
-UINT64 Cache::offset_len() {
-    return log2(line_len);
-}
-
-VOID* Cache::make_addr(UINT64 tag, UINT64 index) {
-    return (VOID *)(((tag << index_len()) | index) << offset_len());
-}
-
-
-UINT64 Cache::get_index(VOID *addr) {
-    return ((UINT64)addr >> offset_len()) & index_mask();
-}
-
-
-UINT64 Cache::get_tag(VOID *addr) {
-    return (UINT64)addr >> (offset_len() + index_len());
-}
-
-Cache::Cache(string pdescription, Memory *pnext,
-    int psize, int pways, int pline_len) :
-    description(pdescription), next(pnext), ways(pways),
-    line_len(pline_len), size(psize) {
-     
-    int sets_number = size/(ways*line_len);
-     
-    for (int i = 0; i < sets_number; i++)
-        sets.push_back(Set(ways));
-
-}
-
-VOID Cache::read(VOID *addr) {
-    reads++;
-    UINT64 tag = get_tag(addr), index = get_index(addr);
-               
-    if (sets[index].is_present(tag)) {
-        read_hits++;
-    } else {
-        if (sets[index].is_full()) {
-            next->write(make_addr(sets[index].unload_tag(), index));
+    for (UINT32 memop = 0; memop < memops; memop++) {
+        if (INS_MemoryOperandIsRead(ins, memop)) {
+            INS_InsertPredicatedCall(ins, IPOINT_BEFORE, (AFUNPTR)rec_memread,
+                IARG_INST_PTR, IARG_MEMORYOP_EA, memop, IARG_END);
         }
-        
-        next->read(addr);                
-        sets[index].load_tag(tag);
+
+        if (INS_MemoryOperandIsWritten(ins, memop)) {
+            INS_InsertPredicatedCall(ins, IPOINT_BEFORE,
+                (AFUNPTR)rec_memwrite, IARG_INST_PTR, IARG_MEMORYOP_EA, memop,
+                IARG_END);
+        }
     }
 }
 
-VOID Cache::write(VOID *addr) {
-    writes++;
-    UINT64 tag = get_tag(addr), index = get_index(addr);        
+static VOID finalize(INT32 code, VOID *v) {
+    front_memory->output(&outfile);
+    outfile.close();
+}
+
+static INT32 usage() {
+    PIN_ERROR("This Pintool simulates a cache hierarchy\n" +
+        KNOB_BASE::StringKnobSummary() + "\n");
+    return -1;
+}
+
+
+int main(int argc, char *argv[])
+{
+
+    if (PIN_Init(argc, argv))
+        return usage();
+
+
+    outfile.open("arqsimucache.out");
+
+    INS_AddInstrumentFunction(instrument_instruction, 0);
+    PIN_AddFiniFunction(finalize, 0);
+
+    RAM *ram = new RAM();
+    Cache *l2 = new Cache("L2", ram, 1000*1024, 2, 16);
+    Cache *l1 = new Cache("L1", l2, 64*1024, 2, 16);
+
+    front_memory = l1;
+
+    // start program and never return
+    PIN_StartProgram();
     
-    if (sets[index].is_present(tag)) {
-        write_hits++;
-    } else {
-        if (sets[index].is_full()) {
-            next->write(make_addr(sets[index].unload_tag(), index));
-        }
-        
-        next->read(addr);
-        sets[index].load_tag(tag);
-    }
-}
-
-VOID Cache::output(std::ostream *outstream) {
-    *outstream << "=====" << std::endl;
-    *outstream << description << ":" << std::endl;
-
-    *outstream << "\tread hits/reads: " <<
-        uint_to_string(read_hits) << " / " << uint_to_string(reads) <<
-        " = " << double_to_string(read_hits/(double)reads) <<
-        std::endl;
-
-    *outstream << "\twrite hits/writes: " <<
-        uint_to_string(write_hits) << " / " <<
-        uint_to_string(writes) << " = " <<
-        double_to_string(write_hits/(double)writes) << std::endl;
-    next->output(outstream);
+    return 0;
 }

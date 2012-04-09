@@ -94,7 +94,7 @@ class CPU {
             // if it's a memory write,
             if (INS_IsMemoryWrite(ins)) {
                 // only use one cycle (but since it's a memory operation, it
-                // will have to wait for other memory operations to complete
+                // will have to wait for other memory operations to complete)
                 process_memop(1);
             }
             else if (INS_IsBranchOrCall(ins) && INS_HasFallThrough(ins)) {
@@ -108,7 +108,6 @@ class CPU {
                 // nor is a conditional branch, it consumes one cycle and can
                 // be executed in parallel if it doesn't need a currently
                 // being used register
-                consume_cycles(1, true);
 
                 // check whether the instruction uses a register that's being
                 // written to by a memory operation

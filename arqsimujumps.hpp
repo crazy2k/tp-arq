@@ -180,6 +180,7 @@ bool TwoBitSaturationHistoryPredictor::analyze(VOID *ip, VOID *target, bool take
             return true;
         }
 
+        *hc = t;
         return false;
     }
 
@@ -240,6 +241,7 @@ bool TwoBitHysteresisHistoryPredictor::analyze(VOID *ip, VOID *target, bool take
             return true;
         }
 
+        *hc = t;
         return false;
     }
 

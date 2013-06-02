@@ -27,8 +27,9 @@ class Set {
 
         bool is_present(UINT64 tag);
         bool is_full();
-        UINT64 unload_tag();
-        VOID load_tag(UINT64 tag);
+        Line *get_line(UINT64 tag);
+        VOID load_line(Line line);
+        Line unload_line();
 };
 
 class Memory {
@@ -99,28 +100,33 @@ VOID Line::mark_dirty() {
 Set::Set(UINT64 nways) : ways(nways) {}
 
 bool Set::is_present(UINT64 tag) {
-    list<Line>::iterator it;
-    for (it = lines.begin(); it != lines.end(); it++) {
-        if (it->get_tag() == tag)
-            return true;
-    }
-
-    return false;
+    return (get_line(tag) != NULL);
 }
 
 bool Set::is_full() {
     return (lines.size() == ways);
 }
 
-UINT64 Set::unload_tag() {
-    UINT64 unloaded_tag = lines.front().get_tag();
-    lines.pop_front();
-    return unloaded_tag;
+
+Line *Set::get_line(UINT64 tag) {
+    list<Line>::iterator it;
+    for (it = lines.begin(); it != lines.end(); it++) {
+        if (it->get_tag() == tag)
+            return &(*it);
+    }
+    return NULL;
 }
 
-VOID Set::load_tag(UINT64 tag) {
+
+Line Set::unload_line() {
+    Line unloaded_line = lines.front();
+    lines.pop_front();
+    return unloaded_line;
+}
+
+VOID Set::load_line(Line line) {
     // TODO: handle the case when set is full
-    lines.push_back(tag);
+    lines.push_back(line);
 }
 
 //Memory methods

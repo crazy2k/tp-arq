@@ -7,11 +7,14 @@
 class Line {
     private:
         UINT64 tag;
+        bool dirty;
     
     public:
         Line(UINT64 ptag = 0);
 
         UINT64 get_tag();
+        VOID mark_dirty();
+        bool is_dirty();
 };
 
 class Set {
@@ -76,10 +79,19 @@ class Cache : public Memory {
 //Line methods
 Line::Line(UINT64 ptag) {
     tag = ptag;
+    dirty = false;
 }
 
 UINT64 Line::get_tag() {
     return tag;
+}
+
+bool Line::is_dirty() {
+    return dirty;
+}
+
+VOID Line::mark_dirty() {
+    dirty = true;
 }
 
 

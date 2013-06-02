@@ -38,22 +38,33 @@ class JumpIfTargetIsLowerPredictor : public Predictor {
         virtual bool analyze(VOID *ip, VOID *target, bool taken);
 };
 
+enum history_counter {N, n, t, T};
 
 class HistoryPredictor : public Predictor {
-    private:
-        struct instruction_history {
-            bool current_prediction;
-            UINT64 wrong;
-        };
-        UINT64 bits;
-        map<UINT64, instruction_history> history;
+    protected:
+        map<UINT64, history_counter> history;
 
     public:
-        HistoryPredictor(UINT64 pbits = 1);
+        HistoryPredictor(string pdescription = "");
+};
 
+class OneBitHistoryPredictor : public HistoryPredictor {
+    public:
+        OneBitHistoryPredictor();
         virtual bool analyze(VOID *ip, VOID *target, bool taken);
 };
 
+class TwoBitSaturationHistoryPredictor : public HistoryPredictor {
+    public:
+        TwoBitSaturationHistoryPredictor();
+        virtual bool analyze(VOID *ip, VOID *target, bool taken);
+};
+
+class TwoBitHysteresisHistoryPredictor : public HistoryPredictor {
+    public:
+        TwoBitHysteresisHistoryPredictor();
+        virtual bool analyze(VOID *ip, VOID *target, bool taken);
+};
 
 //Predictor methods
 Predictor::Predictor(string pdescription) : description(pdescription) {}
@@ -71,6 +82,7 @@ VOID Predictor::output(std::ostream *outstream) {
 //NeverJumpPredictor methods
 NeverJumpPredictor::NeverJumpPredictor() : Predictor("Never Jump Predictor") {
 }
+
 
 bool NeverJumpPredictor::analyze(VOID *ip, VOID *target, bool taken) {
     predictions++;
@@ -121,46 +133,148 @@ bool JumpIfTargetIsLowerPredictor::analyze(VOID *ip, VOID *target, bool taken) {
 }
 
 
-//HistoryPredictor methods
-HistoryPredictor::HistoryPredictor(UINT64 pbits) :
-    Predictor("History Predictor - " + uint_to_string(pbits) +
-        "bits"), bits(pbits) {}
+HistoryPredictor::HistoryPredictor(string pdescription) :
+    Predictor(pdescription) {}
 
-bool HistoryPredictor::analyze(VOID *ip, VOID *target, bool taken) {
+OneBitHistoryPredictor::OneBitHistoryPredictor() :
+    HistoryPredictor("1 Bit History Predictor") {}
+
+
+bool OneBitHistoryPredictor::analyze(VOID *ip, VOID *target, bool taken) {
     predictions++;
 
     UINT64 uint_ip = (UINT64)ip;
 
     // create the record if it doesn't exist
-    if (!history.count(uint_ip)) {
-        instruction_history new_ih;
-        new_ih.current_prediction = true;
-        new_ih.wrong = 0;
-    
-        history[uint_ip] = new_ih;
-    }
+    if (!history.count(uint_ip))
+        history[uint_ip] = T;
 
-    instruction_history *ih = &history[uint_ip];
+    history_counter *hc = &history[uint_ip];
 
-    // if we mispredicted,
-    if (taken != ih->current_prediction) {
-        ih->wrong++;
-        // if we have been wrong 'bits' times, we have to change our
-        // mind for the future
-        if (ih->wrong == bits)
-            ih->current_prediction = !(ih->current_prediction);
-
-        return false;
-    }
-    // if we predicted correctly,
-    else {
+    if (((*hc == T) && taken) || ((*hc == N) && !taken)) {
         hits++;
-        // we forget about the times we were wrong in a row
-        // immediately before
-        ih->wrong = bits;
-
         return true;
+    } else {
+        *hc = (*hc == T) ? N : T;
+        return false;
     }
 }
 
+TwoBitSaturationHistoryPredictor::TwoBitSaturationHistoryPredictor() :
+    HistoryPredictor("2 Bit Saturation History Predictor") {}
 
+bool TwoBitSaturationHistoryPredictor::analyze(VOID *ip, VOID *target, bool taken) {
+    predictions++;
+
+    UINT64 uint_ip = (UINT64)ip;
+
+    // create the record if it doesn't exist
+    if (!history.count(uint_ip))
+        history[uint_ip] = T;
+
+    history_counter *hc = &history[uint_ip];
+
+    if (*hc == T) {
+        if (taken) {
+            hits++;
+            return true;
+        }
+
+        return false;
+    }
+
+    if (*hc == t) {
+        if (taken) {
+            hits++;
+            *hc = T;
+            return true;
+        }
+
+        *hc = n;
+        return false;
+    }
+
+    if (*hc == n) {
+        if (taken) {
+            *hc = t;
+            return false;
+        }
+
+        hits++;
+        *hc = N;
+        return true;
+    }
+
+    if (*hc == N) {
+        if (taken) {
+            *hc = n;
+            return false;
+        }
+
+        hits++;
+        return true;
+    }
+
+    // should never get here
+    return false;
+
+}
+
+TwoBitHysteresisHistoryPredictor::TwoBitHysteresisHistoryPredictor() :
+    HistoryPredictor("2 Bit Hysteresis History Predictor") {}
+
+bool TwoBitHysteresisHistoryPredictor::analyze(VOID *ip, VOID *target, bool taken) {
+    predictions++;
+
+    UINT64 uint_ip = (UINT64)ip;
+
+    // create the record if it doesn't exist
+    if (!history.count(uint_ip))
+        history[uint_ip] = T;
+
+    history_counter *hc = &history[uint_ip];
+
+    if (*hc == T) {
+        if (taken) {
+            hits++;
+            return true;
+        }
+
+        return false;
+    }
+
+    if (*hc == t) {
+        if (taken) {
+            hits++;
+            *hc = T;
+            return true;
+        }
+
+        *hc = N;
+        return false;
+    }
+
+    if (*hc == n) {
+        if (taken) {
+            *hc = T;
+            return false;
+        }
+
+        hits++;
+        *hc = N;
+        return true;
+    }
+
+    if (*hc == N) {
+        if (taken) {
+            *hc = n;
+            return false;
+        }
+
+        hits++;
+        return true;
+    }
+
+    // should never get here
+    return false;
+}

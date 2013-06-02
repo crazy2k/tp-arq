@@ -51,8 +51,9 @@ int main(int argc, char *argv[])
     predictors.push_back(new AlwaysJumpPredictor());
     predictors.push_back(new NeverJumpPredictor());
     predictors.push_back(new JumpIfTargetIsLowerPredictor());
-    predictors.push_back(new HistoryPredictor(1));
-    predictors.push_back(new HistoryPredictor(2));
+    predictors.push_back(new OneBitHistoryPredictor());
+    predictors.push_back(new TwoBitSaturationHistoryPredictor());
+    predictors.push_back(new TwoBitHysteresisHistoryPredictor());
 
     // start program and never return
     PIN_StartProgram();

@@ -204,19 +204,23 @@ UINT64 Cache::read(VOID *addr) {
     reads++;
     UINT64 tag = get_tag(addr), index = get_index(addr);
 
-    UINT64 total_overhead = get_overhead();
+    UINT64 total_overhead = 0;
     if (sets[index].is_present(tag)) {
         read_hits++;
     } else {
         if (sets[index].is_full()) {
-            total_overhead +=
-                next->write(make_addr(sets[index].unload_tag(), index));
+            Line line = sets[index].unload_line();
+            if (line.is_dirty()) {
+                total_overhead +=
+                    next->write(make_addr(line.get_tag(), index));
+            }
         }
         
         total_overhead += next->read(addr);
-        sets[index].load_tag(tag);
+        sets[index].load_line(Line(tag));
     }
 
+    total_overhead += get_overhead();
     return total_overhead;
 }
 
@@ -224,19 +228,25 @@ UINT64 Cache::write(VOID *addr) {
     writes++;
     UINT64 tag = get_tag(addr), index = get_index(addr);        
     
-    UINT64 total_overhead = get_overhead();
+    UINT64 total_overhead = 0;
     if (sets[index].is_present(tag)) {
         write_hits++;
     } else {
         if (sets[index].is_full()) {
-            total_overhead +=
-                next->write(make_addr(sets[index].unload_tag(), index));
+            Line line = sets[index].unload_line();
+            if (line.is_dirty()) {
+                total_overhead +=
+                    next->write(make_addr(line.get_tag(), index));
+            }
         }
         
         total_overhead += next->read(addr);
-        sets[index].load_tag(tag);
+        sets[index].load_line(Line(tag));
     }
 
+    sets[index].get_line(tag)->mark_dirty();
+
+    total_overhead += get_overhead();
     return total_overhead;
 }
 
